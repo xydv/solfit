@@ -26,7 +26,6 @@ pub mod solfit {
         challenge.steps = steps;
         challenge.start_time = start_time;
         challenge.end_time = start_time + (duration as u64 * 86400);
-        challenge.active = true;
         challenge.total_participants = 0;
         challenge.successful_participants = 0;
         challenge.pool = 0;
@@ -37,10 +36,8 @@ pub mod solfit {
     pub fn join_challenge(ctx: Context<JoinChallenge>) -> Result<()> {
         let challenge = &mut ctx.accounts.challenge;
         let participant = &mut ctx.accounts.participant;
-        let vault = &ctx.accounts.pool;
         let current_time = Clock::get()?.unix_timestamp as u64; // +ve since 1970 se hoga calculate
 
-        require!(challenge.active, ErrorCode::ChallengeNotActive);
         require!(
             current_time < challenge.start_time,
             ErrorCode::ChallengeAlreadyStarted
@@ -73,6 +70,37 @@ pub mod solfit {
 
         Ok(())
     }
+
+    pub fn sync_data(ctx: Context<SyncData>, steps: u32) -> Result<()> {
+        let challenge = &mut ctx.accounts.challenge;
+        let participant = &mut ctx.accounts.participant;
+        let current_time = Clock::get()?.unix_timestamp as u64;
+
+        require!(
+            current_time >= challenge.start_time,
+            ErrorCode::ChallengeNotStarted
+        );
+
+        require!(
+            current_time <= challenge.end_time,
+            ErrorCode::ChallengeEnded
+        );
+
+        let current_day = ((current_time - challenge.start_time) / 86400) as u64;
+
+        participant.history[current_day as usize] = steps;
+
+        if steps >= challenge.steps {
+            participant.days_completed += 1;
+        }
+
+        if participant.days_completed >= challenge.duration {
+            participant.completed = true;
+            challenge.successful_participants += 1;
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -81,7 +109,7 @@ pub struct CreateChallenge<'info> {
     #[account(
         init,
         payer = creator,
-        space = 8 + 32 + (4 + name.len()) + 2 + 8 + 4 + 8 + 8 + 1 + 4 + 4 + 8,
+        space = 8 + 32 + (4 + name.len()) + 2 + 8 + 4 + 8 + 8 + 4 + 4 + 8,
         seeds = [b"challenge", creator.key().as_ref(), name.as_bytes()],
         bump
     )]
@@ -90,6 +118,7 @@ pub struct CreateChallenge<'info> {
     #[account(mut)]
     pub creator: Signer<'info>,
 
+    /// CHECK: pool address
     #[account(
         init,
         payer = creator,
@@ -118,6 +147,7 @@ pub struct JoinChallenge<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
+    /// CHECK: pool address
     #[account(
         mut,
         seeds = [b"vault", challenge.key().as_ref()],
@@ -129,6 +159,23 @@ pub struct JoinChallenge<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
+#[derive(Accounts)]
+pub struct SyncData<'info> {
+    #[account(mut)]
+    pub challenge: Account<'info, Challenge>,
+
+    #[account(
+        mut,
+        seeds = [b"participant", challenge.key().as_ref(), user.key().as_ref()],
+        bump,
+        constraint = participant.user == user.key()
+    )]
+    pub participant: Account<'info, Participant>,
+
+    pub user: Signer<'info>, // maybe something in backend?
+    pub system_program: Program<'info, System>,
+}
+
 #[account]
 pub struct Challenge {
     pub creator: Pubkey,
@@ -138,7 +185,6 @@ pub struct Challenge {
     pub steps: u32,
     pub start_time: u64,
     pub end_time: u64,
-    pub active: bool,
     // fields below this need to be updated when joining challenge
     pub total_participants: u32,
     pub successful_participants: u32,
@@ -157,9 +203,10 @@ pub struct Participant {
 
 #[error_code]
 pub enum ErrorCode {
-    #[msg("Challenge is not active")]
-    ChallengeNotActive,
-
     #[msg("Challenge has already started")]
     ChallengeAlreadyStarted,
+    #[msg("Challenge has not started yet")]
+    ChallengeNotStarted,
+    #[msg("Challenge has ended")]
+    ChallengeEnded,
 }
