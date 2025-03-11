@@ -1,16 +1,18 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::system_instruction;
 
 declare_id!("HWDxg2mHw14Y8g3D6xvJeTK5pgByNaPnRVGBvsS8tTZV");
 
 #[program]
 pub mod solfit {
+
     use super::*;
 
     pub fn create_challenge(
         ctx: Context<CreateChallenge>,
         name: String,
         duration: u16,
-        amount: u32,
+        amount: u64,
         steps: u32,
         start_time: u64,
     ) -> Result<()> {
@@ -31,6 +33,46 @@ pub mod solfit {
 
         Ok(())
     }
+
+    pub fn join_challenge(ctx: Context<JoinChallenge>) -> Result<()> {
+        let challenge = &mut ctx.accounts.challenge;
+        let participant = &mut ctx.accounts.participant;
+        let vault = &ctx.accounts.pool;
+        let current_time = Clock::get()?.unix_timestamp as u64; // +ve since 1970 se hoga calculate
+
+        require!(challenge.active, ErrorCode::ChallengeNotActive);
+        require!(
+            current_time < challenge.start_time,
+            ErrorCode::ChallengeAlreadyStarted
+        );
+
+        participant.user = ctx.accounts.user.key();
+        participant.challenge = challenge.key();
+        participant.history = Vec::new();
+        participant.days_completed = 0;
+        participant.completed = false;
+        participant.reward_taken = false;
+
+        let transfer_instruction = system_instruction::transfer(
+            &ctx.accounts.user.key(),
+            &ctx.accounts.pool.key(),
+            challenge.amount,
+        );
+
+        anchor_lang::solana_program::program::invoke(
+            &transfer_instruction,
+            &[
+                ctx.accounts.user.to_account_info(),
+                ctx.accounts.pool.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+
+        challenge.total_participants += 1;
+        challenge.pool += challenge.amount;
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -39,8 +81,8 @@ pub struct CreateChallenge<'info> {
     #[account(
         init,
         payer = creator,
-        space = 8 + 32 + (4 + name.len()) + 2 + 4 + 4 + 8 + 8 + 1 + 4 + 4 + 8,
-        seeds = [b"challenge", challenge.key().as_ref(), creator.key().as_ref()],
+        space = 8 + 32 + (4 + name.len()) + 2 + 8 + 4 + 8 + 8 + 1 + 4 + 4 + 8,
+        seeds = [b"challenge", creator.key().as_ref(), name.as_bytes()],
         bump
     )]
     pub challenge: Account<'info, Challenge>,
@@ -60,12 +102,39 @@ pub struct CreateChallenge<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
+#[derive(Accounts)]
+pub struct JoinChallenge<'info> {
+    #[account(mut)]
+    pub challenge: Account<'info, Challenge>,
+
+    #[account(
+        init,
+        payer = user,
+        space = 8 + 32 + 32 + 4 + (4 * challenge.duration as usize) + 2 + 1 + 1,
+        seeds = [b"participant", challenge.key().as_ref(), user.key().as_ref()],
+        bump
+    )]
+    pub participant: Account<'info, Participant>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"vault", challenge.key().as_ref()],
+        bump
+    )]
+    pub pool: AccountInfo<'info>,
+
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
+
 #[account]
 pub struct Challenge {
     pub creator: Pubkey,
     pub name: String,
     pub duration: u16, // in days hoga
-    pub amount: u32,   // in lamports
+    pub amount: u64,   // in lamports
     pub steps: u32,
     pub start_time: u64,
     pub end_time: u64,
@@ -80,8 +149,17 @@ pub struct Challenge {
 pub struct Participant {
     pub user: Pubkey,
     pub challenge: Pubkey,
-    pub history: Vec<u64>,
-    pub days_completed: u64,
+    pub history: Vec<u32>,
+    pub days_completed: u16,
     pub completed: bool,
     pub reward_taken: bool,
+}
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Challenge is not active")]
+    ChallengeNotActive,
+
+    #[msg("Challenge has already started")]
+    ChallengeAlreadyStarted,
 }
