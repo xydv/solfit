@@ -109,6 +109,54 @@ pub mod solfit {
 
         Ok(())
     }
+
+    pub fn withdraw_reward(ctx: Context<WithdrawReward>) -> Result<()> {
+        let challenge = &ctx.accounts.challenge;
+        let participant = &mut ctx.accounts.participant;
+        let current_time = Clock::get()?.unix_timestamp as u64;
+
+        require!(
+            current_time > challenge.end_time,
+            ErrorCode::ChallengeStillActive
+        );
+        require!(participant.completed, ErrorCode::ChallengeNotCompleted);
+        require!(!participant.reward_taken, ErrorCode::RewardAlreadyWithdrawn);
+
+        let reward_amount = if challenge.successful_participants == 0 {
+            0
+        } else {
+            let failed_participants =
+                (challenge.total_participants - challenge.successful_participants) as u64;
+            let extra_amount = failed_participants * challenge.amount;
+
+            challenge.amount + (extra_amount / challenge.successful_participants as u64)
+        };
+
+        let transfer_instruction = system_instruction::transfer(
+            &ctx.accounts.pool.key(),
+            &ctx.accounts.user.key(),
+            reward_amount,
+        );
+
+        anchor_lang::solana_program::program::invoke_signed(
+            &transfer_instruction,
+            &[
+                ctx.accounts.pool.to_account_info(),
+                ctx.accounts.user.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+            &[&[
+                b"challenge",
+                challenge.creator.as_ref(),
+                challenge.name.as_bytes(),
+                &[ctx.bumps.challenge],
+            ]],
+        )?;
+
+        participant.reward_taken = true;
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -187,6 +235,36 @@ pub struct SyncData<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+pub struct WithdrawReward<'info> {
+    #[account(
+        mut,
+        seeds = [b"challenge", challenge.creator.as_ref(), challenge.name.as_bytes()],
+        bump
+    )]
+    pub challenge: Account<'info, Challenge>,
+
+    #[account(
+        mut,
+        seeds = [b"participant", challenge.key().as_ref(), user.key().as_ref()],
+        bump,
+        constraint = participant.user == user.key()
+    )]
+    pub participant: Account<'info, Participant>,
+
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    /// CHECK: pool account
+    #[account(
+        mut,
+        seeds = [b"vault", challenge.key().as_ref()],
+        bump
+    )]
+    pub pool: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
+}
+
 #[account]
 pub struct Challenge {
     pub creator: Pubkey,
@@ -220,4 +298,10 @@ pub enum ErrorCode {
     ChallengeNotStarted,
     #[msg("Challenge has ended")]
     ChallengeEnded,
+    #[msg("Challenge is still active")]
+    ChallengeStillActive,
+    #[msg("Challenge was not completed")]
+    ChallengeNotCompleted,
+    #[msg("Reward has already been withdrawn")]
+    RewardAlreadyWithdrawn,
 }
