@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::system_instruction;
+use anchor_lang::solana_program::{pubkey, system_instruction};
 
 declare_id!("HWDxg2mHw14Y8g3D6xvJeTK5pgByNaPnRVGBvsS8tTZV");
+
+// used for backend verification for step counts
+const SIGNER_PUBKEY: Pubkey = pubkey!("fithqevcksfXZJcLvje3kfybGLxCNTYAi18BJEZJdMk");
 
 #[program]
 pub mod solfit {
@@ -172,7 +175,10 @@ pub struct SyncData<'info> {
     )]
     pub participant: Account<'info, Participant>,
 
-    pub user: Signer<'info>, // maybe something in backend?
+    /// CHECK: this will be validated by signed message in backend
+    pub user: AccountInfo<'info>,
+    #[account(address = SIGNER_PUBKEY)]
+    pub signer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
