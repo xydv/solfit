@@ -91,6 +91,11 @@ pub mod solfit {
 
         let current_day = ((current_time - challenge.start_time) / 86400) as u64;
 
+        // add a element (0) in vector to resize it to next day!
+        while participant.history.len() <= current_day as usize {
+            participant.history.push(0);
+        }
+
         participant.history[current_day as usize] = steps;
 
         if steps >= challenge.steps {
