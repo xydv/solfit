@@ -4,6 +4,10 @@
 
 Solfit is a blockchain-powered fitness challenge platform that allows users to participate in step-based fitness challenges, ensuring transparency, fairness, and security using Solana smart contracts where rewards are distributed on-chain, making the process trustless and tamper-proof.
 
+![solfit program](/images/1.png)
+
+### <div align="center">Solfit Flow Diagram</div>
+
 ## 🚀 Features
 
 ### 🔒 Secure & Transparent
@@ -40,7 +44,11 @@ Solfit is a blockchain-powered fitness challenge platform that allows users to p
 
 ### Backend & Smart Contract (Rust, Anchor)
 - Solana smart contracts for challenge management
+
+![solfit program](/images/3.png)
 - Health data validation using cryptographic signing
+
+![step verification](/images/2.png)
 
 ### Blockchain Integration
 - Uses Solana blockchain to ensure transparent, immutable challenge tracking
