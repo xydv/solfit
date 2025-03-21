@@ -9,8 +9,11 @@ import IDL from '../idl.json';
 import { Solfit } from '../../anchor-program/target/types/solfit';
 import NodeWallet from '@coral-xyz/anchor/dist/cjs/nodewallet';
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
+import { cors } from 'hono/cors';
 
 const app = new Hono<{ Bindings: Env }>();
+
+app.use(cors());
 
 const rpcUrl = `https://devnet.helius-rpc.com/?api-key=3306ede2-b0da-4ea3-a571-50369811ddb4`;
 const connection = new Connection(rpcUrl);
@@ -97,7 +100,7 @@ app.post(
 				return c.json({ message: 'invalid signature' }, 400);
 			}
 		} catch (e) {
-			return c.json({ message: 'timeout' }, 500);
+			return c.json({ message: 'timeout' }, 418);
 		}
 	},
 );

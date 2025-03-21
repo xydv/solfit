@@ -1,0 +1,119 @@
+{
+  "version": "0.1.0",
+  "name": "solfit",
+  "instructions": [
+    {
+      "name": "createChallenge",
+      "accounts": [
+        { "name": "challenge", "isMut": true, "isSigner": false },
+        { "name": "creator", "isMut": true, "isSigner": true },
+        { "name": "pool", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false },
+        { "name": "rent", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "name", "type": "string" },
+        { "name": "duration", "type": "u16" },
+        { "name": "amount", "type": "u64" },
+        { "name": "steps", "type": "u32" },
+        { "name": "startTime", "type": "u64" }
+      ]
+    },
+    {
+      "name": "joinChallenge",
+      "accounts": [
+        { "name": "challenge", "isMut": true, "isSigner": false },
+        { "name": "participant", "isMut": true, "isSigner": false },
+        { "name": "user", "isMut": true, "isSigner": true },
+        { "name": "pool", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false },
+        { "name": "rent", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    },
+    {
+      "name": "syncData",
+      "accounts": [
+        { "name": "challenge", "isMut": true, "isSigner": false },
+        { "name": "participant", "isMut": true, "isSigner": false },
+        { "name": "user", "isMut": false, "isSigner": false },
+        { "name": "signer", "isMut": false, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "steps", "type": "u32" }]
+    },
+    {
+      "name": "withdrawReward",
+      "accounts": [
+        { "name": "challenge", "isMut": true, "isSigner": false },
+        { "name": "participant", "isMut": true, "isSigner": false },
+        { "name": "user", "isMut": true, "isSigner": true },
+        { "name": "pool", "isMut": true, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Challenge",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "creator", "type": "publicKey" },
+          { "name": "name", "type": "string" },
+          { "name": "duration", "type": "u16" },
+          { "name": "amount", "type": "u64" },
+          { "name": "steps", "type": "u32" },
+          { "name": "startTime", "type": "u64" },
+          { "name": "endTime", "type": "u64" },
+          { "name": "totalParticipants", "type": "u32" },
+          { "name": "successfulParticipants", "type": "u32" },
+          { "name": "pool", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "Participant",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "user", "type": "publicKey" },
+          { "name": "challenge", "type": "publicKey" },
+          { "name": "history", "type": { "vec": "u32" } },
+          { "name": "daysCompleted", "type": "u16" },
+          { "name": "completed", "type": "bool" },
+          { "name": "rewardTaken", "type": "bool" }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ChallengeAlreadyStarted",
+      "msg": "Challenge has already started"
+    },
+    {
+      "code": 6001,
+      "name": "ChallengeNotStarted",
+      "msg": "Challenge has not started yet"
+    },
+    { "code": 6002, "name": "ChallengeEnded", "msg": "Challenge has ended" },
+    {
+      "code": 6003,
+      "name": "ChallengeStillActive",
+      "msg": "Challenge is still active"
+    },
+    {
+      "code": 6004,
+      "name": "ChallengeNotCompleted",
+      "msg": "Challenge was not completed"
+    },
+    {
+      "code": 6005,
+      "name": "RewardAlreadyWithdrawn",
+      "msg": "Reward has already been withdrawn"
+    }
+  ]
+}

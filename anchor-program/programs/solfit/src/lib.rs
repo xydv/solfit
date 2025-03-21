@@ -96,9 +96,12 @@ pub mod solfit {
             participant.history.push(0);
         }
 
+        let previous_steps = participant.history[current_day as usize];
+        let threshold = previous_steps < challenge.steps && steps >= challenge.steps;
+
         participant.history[current_day as usize] = steps;
 
-        if steps >= challenge.steps {
+        if threshold {
             participant.days_completed += 1;
         }
 
