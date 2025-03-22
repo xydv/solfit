@@ -38,6 +38,7 @@ Solfit is a blockchain-powered fitness challenge platform that allows users to p
 ## 🛠 Tech Stack
 
 ### Mobile App (React Native)
+Mobile app (Android) can be downloaded from the [releases section](https://github.com/dedomil/solfit/releases)!
 - Built using React Native for cross-platform support
 - Sign In With Solana
 - Health Connect Integration for retrieving step data
