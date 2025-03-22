@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
-// import { DatePickerModal, TimePickerModal } from "react-native-paper-dates";
-// import { enGB, registerTranslation } from "react-native-paper-dates";
+import { DatePickerModal, TimePickerModal } from "react-native-paper-dates";
+import { enGB, registerTranslation } from "react-native-paper-dates";
 import {
   CreateChallengeArgs,
   useSolfitProgram,
 } from "../components/solfit/solfit-data-access";
-// registerTranslation("en-GB", enGB);
+registerTranslation("en-GB", enGB);
 
 type FormErrors = {
   name?: string;
@@ -190,7 +190,7 @@ export default function BlankScreen() {
         </Button>
       </ScrollView>
 
-      {/* <DatePickerModal
+      <DatePickerModal
         locale="en-GB"
         mode="single"
         visible={showDatePicker}
@@ -201,15 +201,15 @@ export default function BlankScreen() {
         }}
         animationType="slide"
         presentationStyle="pageSheet"
-      /> */}
+      />
 
-      {/* <TimePickerModal
+      <TimePickerModal
         visible={showTimePicker}
         onDismiss={onDismissTime}
         onConfirm={onConfirmTime}
         hours={startTime.getHours()}
         minutes={startTime.getMinutes()}
-      /> */}
+      />
     </>
   );
 }

@@ -39,6 +39,21 @@ export function HomeScreen() {
     queryClient.invalidateQueries({ queryKey: ["get-all-challenges"] });
   }
 
+  const getChallengeStatus = (challenge: any) => {
+    const currentTime = Math.floor(Date.now() / 1000);
+    const startTime = parseInt(challenge.account.startTime.toString());
+    const endTime =
+      startTime + parseInt(challenge.account.duration.toString()) * 86400;
+
+    if (currentTime < startTime) {
+      return { text: "Not Started", color: "#fbdeac", icon: "clock-outline" }; // Orange
+    } else if (currentTime < endTime) {
+      return { text: "Active", color: "#d9e7cb", icon: "play-circle-outline" }; // Green
+    } else {
+      return { text: "Ended", color: "#ffdbc9", icon: "stop-circle-outline" }; // Red
+    }
+  };
+
   function handleSearch() {
     if (!data) return;
 
@@ -71,6 +86,16 @@ export function HomeScreen() {
                     }}
                     style={styles.cardCover}
                   />
+                  <Chip
+                    icon={getChallengeStatus(e).icon}
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: getChallengeStatus(e).color },
+                    ]}
+                    textStyle={{ color: "#314f37", fontWeight: "bold" }}
+                  >
+                    {getChallengeStatus(e).text}
+                  </Chip>
                   <Card.Content style={styles.cardContent}>
                     <Text variant="titleLarge" style={[styles.challengeName]}>
                       {e.account.name}
@@ -124,7 +149,9 @@ export function HomeScreen() {
                           .map((x) =>
                             x.participant.account.challenge.toBase58(),
                           )
-                          .includes(e.publicKey.toBase58())
+                          .includes(e.publicKey.toBase58()) ||
+                        parseInt(e.account.startTime) >
+                          Math.floor(Date.now() / 1000)
                       }
                     >
                       Register for{" "}
@@ -174,6 +201,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     marginBottom: 4,
+  },
+  statusBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    padding: 0,
+    color: "black",
   },
   statItem: {
     flex: 1,

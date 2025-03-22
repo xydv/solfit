@@ -310,6 +310,49 @@ export function useSolfitProgram() {
     onError: (error: Error) => alertAndLog(error.name, error.message),
   });
 
+  const claimReward = useMutation({
+    mutationKey: ["claim-reward"],
+    mutationFn: async (challenge: string) => {
+      if (!solfitProgram) {
+        throw Error("Counter program not instantiated");
+      }
+
+      if (!anchorWallet) {
+        throw Error("Please connect wallet");
+      }
+
+      const participantSeed = Buffer.from("participant");
+      const [participant] = PublicKey.findProgramAddressSync(
+        [
+          participantSeed,
+          new PublicKey(challenge).toBuffer(),
+          anchorWallet.publicKey.toBuffer(),
+        ],
+        solfitProgramId,
+      );
+
+      const poolSeed = Buffer.from("vault");
+      const [pool] = PublicKey.findProgramAddressSync(
+        [poolSeed, new PublicKey(challenge).toBuffer()],
+        solfitProgramId,
+      );
+
+      return await solfitProgram.methods
+        .withdrawReward()
+        .accounts({
+          challenge: new PublicKey(challenge),
+          participant,
+          user: anchorWallet.publicKey,
+          pool,
+        })
+        .rpc();
+    },
+    onSuccess: (signature: string) => {
+      return [signature];
+    },
+    onError: (error: Error) => alertAndLog(error.name, error.message),
+  });
+
   return {
     solfitProgram,
     solfitProgramId,
@@ -320,5 +363,6 @@ export function useSolfitProgram() {
     getUserJoinedChallenges,
     checkIfUserIsRegisteredInChallenge,
     syncData,
+    claimReward,
   };
 }

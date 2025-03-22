@@ -34,7 +34,7 @@ export default function MyChallengesScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
   const queryClient = useQueryClient();
-  const { getUserJoinedChallenges, syncData } = useSolfitProgram();
+  const { getUserJoinedChallenges, syncData, claimReward } = useSolfitProgram();
   const { isSuccess, data } = getUserJoinedChallenges(
     connectedWallet.selectedAccount?.publicKey.toString(),
   );
@@ -76,8 +76,11 @@ export default function MyChallengesScreen() {
         signature: bs58.encode(signature),
       },
       {
-        onSuccess(data, variables, context) {
+        async onSuccess(data, variables, context) {
           console.log("syncdata success");
+          await queryClient.invalidateQueries({
+            queryKey: ["get-user", selectedAccount?.publicKey.toBase58()],
+          });
         },
 
         onError(error, variables, context) {
@@ -85,6 +88,20 @@ export default function MyChallengesScreen() {
         },
       },
     );
+  }
+
+  async function handleClaimReward(challenge: string) {
+    await claimReward.mutateAsync(challenge, {
+      async onSuccess(data, variables, context) {
+        console.log("claim success");
+        await queryClient.invalidateQueries({
+          queryKey: ["get-user", selectedAccount?.publicKey.toBase58()],
+        });
+      },
+      onError(error, variables, context) {
+        console.log("claim error");
+      },
+    });
   }
 
   const renderCurrentChallenges = () => {
@@ -175,6 +192,10 @@ export default function MyChallengesScreen() {
                     participant.account.challenge.toBase58(),
                   );
                 }}
+                disabled={
+                  parseInt(challenge.startTime.toString()) >
+                  Math.floor(Date.now() / 1000)
+                }
               >
                 Sync Steps
               </Button>
@@ -215,53 +236,43 @@ export default function MyChallengesScreen() {
     }
 
     return data?.complete?.map(({ challenge, participant }, i) => {
-      if (!participant.account.completed) {
+      if (participant.account.completed) {
         return (
           <Card key={i} style={styles.card} mode="elevated">
             <Card.Content style={styles.cardContent}>
               <Text variant="titleLarge" style={styles.challengeName}>
                 {challenge.name}
               </Text>
-
-              <View style={[styles.progressContainer]}>
-                <ProgressBar progress={0.5} />
-                <Text variant="labelSmall" style={styles.progressText}>
-                  {/* {challenge.daysLeft} days left */}1 day left
-                </Text>
-              </View>
-
               <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                  <MaterialCommunityIcons
-                    name="shoe-print"
-                    size={18}
-                    color="#6200EE"
-                  />
-                  <Text variant="bodyMedium">
-                    {challenge.steps.toString()}/{challenge.steps.toString()}
-                  </Text>
-                </View>
-
                 <Chip icon="trophy">
                   {challenge.totalParticipants.toString()} participants
                 </Chip>
-              </View>
-
-              <View style={styles.rewardContainer}>
-                <MaterialCommunityIcons
-                  name="currency-usd"
-                  size={20}
-                  color="#6200EE"
-                />
-                <Text variant="titleMedium" style={styles.rewardText}>
-                  Pool: {challenge.pool.toString()} SOL
-                </Text>
+                <Chip icon="currency-usd">
+                  Pool: {challenge.pool.toString() / LAMPORTS_PER_SOL} SOL
+                </Chip>
               </View>
             </Card.Content>
 
             <Card.Actions style={styles.cardActions}>
-              <Button mode="outlined" icon="update" style={styles.actionButton}>
-                Claim Reward
+              <Button
+                mode="contained-tonal"
+                icon="currency-usd"
+                style={styles.actionButton}
+                disabled={
+                  participant.account.rewardTaken ||
+                  parseInt(challenge.endTime.toString()) >
+                    Math.floor(Date.now() / 1000)
+                }
+                onPress={() =>
+                  handleClaimReward(participant.account.challenge.toBase58())
+                }
+              >
+                {parseInt(challenge.endTime.toString()) >
+                Math.floor(Date.now() / 1000)
+                  ? "Not Ended"
+                  : participant.account.rewardTaken
+                    ? "Already Claimed"
+                    : "Claim Reward"}
               </Button>
               <Button
                 mode="contained"

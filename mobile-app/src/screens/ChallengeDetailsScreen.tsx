@@ -61,9 +61,33 @@ const ChallengeDetailsScreen: React.FC<ChallengeDetailsScreenProps> = ({
 
   const currentTime = Math.floor(Date.now() / 1000);
   const startTime = parseInt(data?.startTime.toString() || `${currentTime}`);
+  const endTime =
+    startTime + parseInt(data?.duration.toString() || "0") * 86400;
   const currentDay = Math.floor((currentTime - startTime) / 86400);
   const dayStartTime = startTime + currentDay * 86400;
   const dayEndTime = dayStartTime + 86400;
+
+  const getChallengeTimingText = (): { text: string; isStarted: boolean } => {
+    if (!data) {
+      return { text: "Loading challenge data...", isStarted: false };
+    }
+
+    if (currentTime < startTime) {
+      const daysToStart = Math.ceil((startTime - currentTime) / 86400);
+      return {
+        text: `Challenge starts in ${daysToStart} ${daysToStart === 1 ? "day" : "days"}`,
+        isStarted: false,
+      };
+    } else if (currentTime < endTime) {
+      const daysToEnd = Math.ceil((endTime - currentTime) / 86400);
+      return {
+        text: `Challenge ends in ${daysToEnd} ${daysToEnd === 1 ? "day" : "days"}`,
+        isStarted: true,
+      };
+    } else {
+      return { text: "Challenge has ended", isStarted: false };
+    }
+  };
 
   const formatPubkey = (pubkey: string): string => {
     if (!pubkey || pubkey.length < 10) return pubkey;
@@ -84,6 +108,19 @@ const ChallengeDetailsScreen: React.FC<ChallengeDetailsScreenProps> = ({
               <Chip icon="currency-usd">
                 {data?.pool.toString() / LAMPORTS_PER_SOL} SOL
               </Chip>
+            </View>
+            <View style={styles.countdownContainer}>
+              <Text
+                variant="bodyMedium"
+                style={[
+                  styles.countdownText,
+                  getChallengeTimingText().isStarted
+                    ? styles.endsInText
+                    : styles.startsInText,
+                ]}
+              >
+                {getChallengeTimingText().text}
+              </Text>
             </View>
 
             <View style={styles.statsContainer}>
@@ -126,7 +163,10 @@ const ChallengeDetailsScreen: React.FC<ChallengeDetailsScreenProps> = ({
                     <Text variant="bodyMedium">Overall Completion</Text>
                     <Text variant="bodyMedium">
                       {Math.floor(
-                        (user.participant.history.reduce((a, c) => a + c, 0) /
+                        (user.participant.history.reduce(
+                          (a: number, c: number) => a + c,
+                          0,
+                        ) /
                           ((data?.duration || 0) * (data?.steps || 0))) *
                           100,
                       )}
@@ -135,7 +175,10 @@ const ChallengeDetailsScreen: React.FC<ChallengeDetailsScreenProps> = ({
                   </View>
                   <ProgressBar
                     progress={
-                      user.participant.history.reduce((a, c) => a + c, 0) /
+                      user.participant.history.reduce(
+                        (a: number, c: number) => a + c,
+                        0,
+                      ) /
                       ((data?.duration || 0) * (data?.steps || 0))
                     }
                     color={colors.primary}
@@ -186,7 +229,7 @@ const ChallengeDetailsScreen: React.FC<ChallengeDetailsScreenProps> = ({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.daysScrollContent}
               >
-                {user?.participant.history.map((day, i) => (
+                {user?.participant.history.map((day: number, i: number) => (
                   <TouchableOpacity
                     key={i}
                     onPress={() => setSelectedDay(i + 1)}
@@ -317,13 +360,15 @@ const ChallengeDetailsScreen: React.FC<ChallengeDetailsScreenProps> = ({
                             : styles.incompleteStatus,
                         ]}
                       >
-                        {(parseInt(
-                          user?.participant.history[
-                            selectedDay - 1
-                          ]?.toString() || "0",
-                        ) /
-                          parseInt(user?.challenge.steps.toString() || "0")) *
-                          100}
+                        {Math.floor(
+                          (parseInt(
+                            user?.participant.history[
+                              selectedDay - 1
+                            ]?.toString() || "0",
+                          ) /
+                            parseInt(user?.challenge.steps.toString() || "0")) *
+                            100,
+                        )}
                         %
                       </Text>
                     </View>
@@ -354,44 +399,55 @@ const ChallengeDetailsScreen: React.FC<ChallengeDetailsScreenProps> = ({
           </Card>
         )}
 
-        <Card style={[styles.card, dynamicStyles.card]} mode="elevated">
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Leaderboard
-            </Text>
-            {user?.all.map((participant, i) => (
-              <View
-                key={i}
-                style={[styles.leaderboardItem, dynamicStyles.leaderboardItem]}
-              >
-                <View style={styles.rankContainer}>
-                  <Text
-                    variant="titleMedium"
-                    // style={participant.name === "You" ? styles.yourRank : null}
-                  >
-                    #{i + 1}
+        {!user?.all ? (
+          ""
+        ) : (
+          <Card style={[styles.card, dynamicStyles.card]} mode="elevated">
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Leaderboard
+              </Text>
+              {user?.all.map((participant, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.leaderboardItem,
+                    dynamicStyles.leaderboardItem,
+                  ]}
+                >
+                  <View style={styles.rankContainer}>
+                    <Text
+                      variant="titleMedium"
+                      // style={participant.name === "You" ? styles.yourRank : null}
+                    >
+                      #{i + 1}
+                    </Text>
+                  </View>
+                  <Avatar.Text
+                    size={28}
+                    label={participant.publicKey.toBase58().substring(0, 2)}
+                    style={styles.avatar}
+                  />
+                  <View style={styles.participantInfo}>
+                    <Text
+                      variant="bodyMedium"
+                      // style={participant.name === "You" ? styles.yourName : null}
+                    >
+                      {formatPubkey(participant.publicKey.toBase58())}
+                    </Text>
+                  </View>
+                  <Text variant="bodyMedium" style={styles.leaderboardSteps}>
+                    {participant.account.history.reduce(
+                      (a: number, c: number) => a + c,
+                      0,
+                    )}{" "}
+                    Steps
                   </Text>
                 </View>
-                <Avatar.Text
-                  size={28}
-                  label={participant.publicKey.toBase58().substring(0, 2)}
-                  style={styles.avatar}
-                />
-                <View style={styles.participantInfo}>
-                  <Text
-                    variant="bodyMedium"
-                    // style={participant.name === "You" ? styles.yourName : null}
-                  >
-                    {formatPubkey(participant.publicKey.toBase58())}
-                  </Text>
-                </View>
-                <Text variant="bodyMedium" style={styles.leaderboardSteps}>
-                  {participant.account.history.reduce((a, c) => a + c, 0)} Steps
-                </Text>
-              </View>
-            ))}
-          </Card.Content>
-        </Card>
+              ))}
+            </Card.Content>
+          </Card>
+        )}
       </ScrollView>
     </PaperProvider>
   );
@@ -412,6 +468,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
+  },
+  challengeHeaderDate: {
+    fontSize: 13,
+    color: "grey",
+    textAlign: "right",
+    marginBottom: 8,
+    marginRight: 3,
   },
   statsContainer: {
     flexDirection: "row",
@@ -547,6 +610,19 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     marginHorizontal: 4,
+  },
+  countdownContainer: {
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  countdownText: {
+    fontWeight: "bold",
+  },
+  startsInText: {
+    color: "#FF9800", // Orange for "starts in"
+  },
+  endsInText: {
+    color: "#4CAF50", // Green for "ends in"
   },
 });
 
