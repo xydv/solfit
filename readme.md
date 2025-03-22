@@ -42,6 +42,31 @@ Solfit is a blockchain-powered fitness challenge platform that allows users to p
 - Sign In With Solana
 - Health Connect Integration for retrieving step data
 
+<table>
+  <tr>
+    <td align="center">
+      <img src="/images/android/1.png" alt="Home Page" width=300 />
+    </td>
+    <td align="center">
+      <img src="/images/android/2.png" alt="Create Challenge" width=300 />
+    </td>
+    <td align="center">
+      <img src="/images/android/3.png" alt="Registered Challenges" width=300 />
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="/images/android/4.png" alt="Completed Challenges" width=300 />
+    </td>
+    <td align="center">
+      <img src="/images/android/5.png" alt="Created Challenges" width=300 />
+    </td>
+    <td align="center">
+      <img src="/images/android/6.png" alt="Challenge Details" width=300 />
+    </td>
+  </tr>
+</table>
+
 ### Backend & Smart Contract (Rust, Anchor)
 - Solana smart contracts for challenge management
 
