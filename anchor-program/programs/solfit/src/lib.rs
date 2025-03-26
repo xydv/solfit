@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{pubkey, system_instruction};
 
-declare_id!("HWDxg2mHw14Y8g3D6xvJeTK5pgByNaPnRVGBvsS8tTZV");
+declare_id!("HcW7goAkhwaUX1JdmaCEBoprk4XnXxci4XCGrRFnxvXe");
 
 // used for backend verification for step counts
 const SIGNER_PUBKEY: Pubkey = pubkey!("fithqevcksfXZJcLvje3kfybGLxCNTYAi18BJEZJdMk");
@@ -18,9 +18,27 @@ pub mod solfit {
         amount: u64,
         steps: u32,
         start_time: u64,
+        is_private: bool,
+        group_members_count: u8,
     ) -> Result<()> {
         let challenge = &mut ctx.accounts.challenge;
         let creator = &ctx.accounts.creator;
+
+        let group_members: Vec<Pubkey> = ctx
+            .remaining_accounts
+            .iter()
+            .map(|account| account.key())
+            .collect();
+
+        if is_private {
+            if !group_members.contains(&creator.key()) {
+                return err!(ErrorCode::CreatorMustBeInGroup);
+            }
+
+            if group_members.len() <= 1 {
+                return err!(ErrorCode::InsufficientGroupMembers);
+            }
+        }
 
         challenge.creator = creator.key();
         challenge.name = name;
@@ -32,6 +50,8 @@ pub mod solfit {
         challenge.total_participants = 0;
         challenge.successful_participants = 0;
         challenge.pool = 0;
+        challenge.group = group_members;
+        challenge.is_private = is_private;
 
         Ok(())
     }
@@ -39,7 +59,14 @@ pub mod solfit {
     pub fn join_challenge(ctx: Context<JoinChallenge>) -> Result<()> {
         let challenge = &mut ctx.accounts.challenge;
         let participant = &mut ctx.accounts.participant;
-        let current_time = Clock::get()?.unix_timestamp as u64; // +ve since 1970 se hoga calculate
+        let current_time = Clock::get()?.unix_timestamp as u64;
+
+        if challenge.is_private {
+            require!(
+                challenge.group.contains(&ctx.accounts.user.key()),
+                ErrorCode::NotInChallengeGroup
+            );
+        }
 
         require!(
             current_time < challenge.start_time,
@@ -79,6 +106,13 @@ pub mod solfit {
         let participant = &mut ctx.accounts.participant;
         let current_time = Clock::get()?.unix_timestamp as u64;
 
+        if challenge.is_private {
+            require!(
+                challenge.group.contains(&participant.user),
+                ErrorCode::NotInChallengeGroup
+            );
+        }
+
         require!(
             current_time >= challenge.start_time,
             ErrorCode::ChallengeNotStarted
@@ -117,6 +151,13 @@ pub mod solfit {
         let challenge = &ctx.accounts.challenge;
         let participant = &mut ctx.accounts.participant;
         let current_time = Clock::get()?.unix_timestamp as u64;
+
+        if challenge.is_private {
+            require!(
+                challenge.group.contains(&participant.user),
+                ErrorCode::NotInChallengeGroup
+            );
+        }
 
         require!(
             current_time > challenge.end_time,
@@ -163,12 +204,12 @@ pub mod solfit {
 }
 
 #[derive(Accounts)]
-#[instruction(name: String)]
+#[instruction(name: String, group_members_count: u8)]
 pub struct CreateChallenge<'info> {
     #[account(
         init,
         payer = creator,
-        space = 8 + 32 + (4 + name.len()) + 2 + 8 + 4 + 8 + 8 + 4 + 4 + 8,
+        space = 8 + 32 + (4 + name.len()) + 2 + 8 + 4 + 8 + 8 + 4 + 4 + 8 + 1 + (4 + (32 * group_members_count as usize)),
         seeds = [b"challenge", creator.key().as_ref(), name.as_bytes()],
         bump
     )]
@@ -281,6 +322,8 @@ pub struct Challenge {
     pub total_participants: u32,
     pub successful_participants: u32,
     pub pool: u64,
+    pub is_private: bool,
+    pub group: Vec<Pubkey>,
 }
 
 #[account]
@@ -307,4 +350,10 @@ pub enum ErrorCode {
     ChallengeNotCompleted,
     #[msg("Reward has already been withdrawn")]
     RewardAlreadyWithdrawn,
+    #[msg("User is not in the challenge group")]
+    NotInChallengeGroup,
+    #[msg("Creator must be in the group")]
+    CreatorMustBeInGroup,
+    #[msg("Group must have at least two members")]
+    InsufficientGroupMembers,
 }
