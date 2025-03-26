@@ -1,12 +1,19 @@
 import React, { useState } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
-import { TextInput, Button, Text } from "react-native-paper";
+import {
+  TextInput,
+  Button,
+  Text,
+  Switch,
+  IconButton,
+} from "react-native-paper";
 import { DatePickerModal, TimePickerModal } from "react-native-paper-dates";
 import { enGB, registerTranslation } from "react-native-paper-dates";
 import {
   CreateChallengeArgs,
   useSolfitProgram,
 } from "../components/solfit/solfit-data-access";
+import { useNavigation } from "@react-navigation/native";
 registerTranslation("en-GB", enGB);
 
 type FormErrors = {
@@ -15,6 +22,8 @@ type FormErrors = {
   amount?: string;
   steps?: string;
   startTime?: string;
+  isPrivate?: boolean;
+  groupMembers?: string[];
 };
 
 export default function BlankScreen() {
@@ -22,6 +31,7 @@ export default function BlankScreen() {
   const [duration, setDuration] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [steps, setSteps] = useState<string>("");
+  const [isSwitchOn, setIsSwitchOn] = React.useState(false);
   const [startTime, setStartTime] = useState<Date>(
     new Date(Date.now() + 200000000),
   );
@@ -29,8 +39,37 @@ export default function BlankScreen() {
   const [formData, setFormData] = useState<CreateChallengeArgs | null>(null);
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
+  const [groupMembers, setParticipantAddresses] = useState<string[]>([""]);
+
+  const navigation = useNavigation();
 
   const { createChallenge } = useSolfitProgram();
+  const onToggleSwitch = () => {
+    setIsSwitchOn(!isSwitchOn);
+    if (!isSwitchOn) {
+      setParticipantAddresses([""]);
+    } else {
+      setParticipantAddresses([]);
+    }
+  };
+
+  const removeParticipantAddress = (indexToRemove: number) => {
+    if (groupMembers.length > 1) {
+      setParticipantAddresses(
+        groupMembers.filter((_, index) => index !== indexToRemove),
+      );
+    }
+  };
+
+  const addParticipantAddress = () => {
+    setParticipantAddresses([...groupMembers, ""]);
+  };
+
+  const updateParticipantAddress = (index: number, value: string) => {
+    const newAddresses = [...groupMembers];
+    newAddresses[index] = value;
+    setParticipantAddresses(newAddresses);
+  };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -59,6 +98,13 @@ export default function BlankScreen() {
 
     if (!startTime) {
       newErrors.startTime = "Start time is required";
+    }
+
+    if (isSwitchOn) {
+      const invalidAddresses = groupMembers.some((address) => !address.trim());
+      if (invalidAddresses) {
+        newErrors.groupMembers = ["All participant addresses must be filled"];
+      }
     }
 
     setErrors(newErrors);
@@ -95,6 +141,7 @@ export default function BlankScreen() {
     newDate.setHours(hours);
     newDate.setMinutes(minutes);
     setStartTime(newDate);
+    console.log(newDate.getTime());
   };
 
   const handleSubmit = (): void => {
@@ -105,13 +152,15 @@ export default function BlankScreen() {
         amount: amount,
         steps: steps,
         startTime: `${parseInt((startTime.getTime() / 1000).toString())}`,
+        isPrivate: isSwitchOn,
+        ...(isSwitchOn && { groupMembers }),
       };
 
       setFormData(formattedData);
 
       createChallenge.mutate(formattedData, {
         onSuccess: () => {
-          console.log("success");
+          navigation.navigate("Home");
         },
       });
     }
@@ -184,6 +233,47 @@ export default function BlankScreen() {
         {errors.startTime && (
           <Text style={styles.errorText}>{errors.startTime}</Text>
         )}
+        <View style={styles.switchContainer}>
+          <Text>Private</Text>
+          <Switch value={isSwitchOn} onValueChange={onToggleSwitch} />
+        </View>
+
+        {isSwitchOn && (
+          <>
+            {groupMembers.map((address, index) => (
+              <View key={index} style={styles.participantInputContainer}>
+                <View style={styles.participantInputRow}>
+                  <TextInput
+                    label={`Participant ${index + 1} Address`}
+                    value={address}
+                    onChangeText={(value) =>
+                      updateParticipantAddress(index, value)
+                    }
+                    mode="outlined"
+                    style={styles.participantInput}
+                  />
+                  {/* Only show remove button if there's more than one input */}
+                  {groupMembers.length > 1 && (
+                    <IconButton
+                      icon="close"
+                      size={20}
+                      onPress={() => removeParticipantAddress(index)}
+                      style={styles.removeButton}
+                    />
+                  )}
+                </View>
+              </View>
+            ))}
+
+            <Button
+              mode="outlined"
+              onPress={addParticipantAddress}
+              style={styles.addParticipantButton}
+            >
+              Add Participant
+            </Button>
+          </>
+        )}
 
         <Button mode="contained-tonal" onPress={handleSubmit}>
           Create Challenge
@@ -239,5 +329,29 @@ const styles = StyleSheet.create({
   dateLabel: {
     fontSize: 16,
     marginBottom: 8,
+  },
+  switchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  participantInputContainer: {
+    marginBottom: 10,
+  },
+  addParticipantButton: {
+    marginBottom: 10,
+  },
+  participantInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  participantInput: {
+    flex: 1,
+    // marginRight: 10,
+  },
+  removeButton: {
+    marginLeft: 5,
   },
 });

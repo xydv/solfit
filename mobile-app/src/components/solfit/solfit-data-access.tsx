@@ -15,7 +15,7 @@ import {
   requestPermission,
 } from "react-native-health-connect";
 
-const PROGRAM_ID = "HGJ5aduNj8zgTthPEXf3hgmmEy19MmCpSu3PzwhPedCd";
+const PROGRAM_ID = "HcW7goAkhwaUX1JdmaCEBoprk4XnXxci4XCGrRFnxvXe";
 
 export type CreateChallengeArgs = {
   name: string;
@@ -23,6 +23,8 @@ export type CreateChallengeArgs = {
   amount: string;
   steps: string;
   startTime: string;
+  isPrivate: boolean;
+  groupMembers?: string[];
 };
 
 export type SyncDataArgs = {
@@ -66,9 +68,31 @@ export function useSolfitProgram() {
         return null;
       }
 
-      return await solfitProgram.account.challenge.all();
+      return (await solfitProgram.account.challenge.all()).filter(
+        (e) => !e.account.isPrivate,
+      );
     },
   });
+
+  const getPrivateChallenges = (user: string | undefined) => {
+    return useQuery({
+      queryKey: ["get-challenge-private"],
+      queryFn: async () => {
+        if (!solfitProgram) {
+          return null;
+        }
+
+        if (!user) return null;
+
+        return (await solfitProgram.account.challenge.all()).filter((e) => {
+          return (
+            e.account.isPrivate &&
+            e.account.group.map((e) => e.toBase58()).includes(user)
+          );
+        });
+      },
+    });
+  };
 
   const getChallenge = (challenge: string) => {
     return useQuery({
@@ -257,6 +281,20 @@ export function useSolfitProgram() {
         solfitProgramId,
       );
 
+      const remainingAccounts = data.groupMembers?.map((e) => {
+        return {
+          pubkey: new PublicKey(e),
+          isWritable: false,
+          isSigner: false,
+        };
+      });
+
+      remainingAccounts?.push({
+        pubkey: anchorWallet.publicKey,
+        isWritable: false,
+        isSigner: true,
+      });
+
       return await solfitProgram.methods
         .createChallenge(
           data.name,
@@ -264,12 +302,15 @@ export function useSolfitProgram() {
           new anchor.BN(parseFloat(data.amount) * LAMPORTS_PER_SOL),
           new anchor.BN(data.steps),
           new anchor.BN(data.startTime),
+          data.isPrivate,
+          data.groupMembers?.length || 0,
         )
         .accounts({
           challenge: challengePda,
           creator: anchorWallet.publicKey,
           pool,
         })
+        .remainingAccounts(remainingAccounts || [])
         .rpc();
     },
     onSuccess: (signature: string) => {
@@ -364,5 +405,6 @@ export function useSolfitProgram() {
     checkIfUserIsRegisteredInChallenge,
     syncData,
     claimReward,
+    getPrivateChallenges,
   };
 }

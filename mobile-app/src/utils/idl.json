@@ -16,7 +16,9 @@
         { "name": "duration", "type": "u16" },
         { "name": "amount", "type": "u64" },
         { "name": "steps", "type": "u32" },
-        { "name": "startTime", "type": "u64" }
+        { "name": "startTime", "type": "u64" },
+        { "name": "isPrivate", "type": "bool" },
+        { "name": "groupMembersCount", "type": "u8" }
       ]
     },
     {
@@ -69,7 +71,9 @@
           { "name": "endTime", "type": "u64" },
           { "name": "totalParticipants", "type": "u32" },
           { "name": "successfulParticipants", "type": "u32" },
-          { "name": "pool", "type": "u64" }
+          { "name": "pool", "type": "u64" },
+          { "name": "isPrivate", "type": "bool" },
+          { "name": "group", "type": { "vec": "publicKey" } }
         ]
       }
     },
@@ -114,6 +118,21 @@
       "code": 6005,
       "name": "RewardAlreadyWithdrawn",
       "msg": "Reward has already been withdrawn"
+    },
+    {
+      "code": 6006,
+      "name": "NotInChallengeGroup",
+      "msg": "User is not in the challenge group"
+    },
+    {
+      "code": 6007,
+      "name": "CreatorMustBeInGroup",
+      "msg": "Creator must be in the group"
+    },
+    {
+      "code": 6008,
+      "name": "InsufficientGroupMembers",
+      "msg": "Group must have at least two members"
     }
   ]
 }

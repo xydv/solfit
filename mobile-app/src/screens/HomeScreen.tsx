@@ -19,12 +19,20 @@ export function HomeScreen() {
     "https://www.sciencefriday.com/wp-content/uploads/2024/10/NY-marathon.jpg",
   ];
 
-  const { getAllChallenges, joinChallenge, getUserJoinedChallenges } =
-    useSolfitProgram();
+  const {
+    getAllChallenges,
+    joinChallenge,
+    getUserJoinedChallenges,
+    getPrivateChallenges,
+  } = useSolfitProgram();
   const queryClient = useQueryClient();
   const navigation = useNavigation();
   const { isSuccess, data } = getAllChallenges;
   const { data: joinedData } = getUserJoinedChallenges(
+    selectedAccount?.publicKey.toBase58(),
+  );
+
+  const { data: privateData, isSuccess: privateSuccess } = getPrivateChallenges(
     selectedAccount?.publicKey.toBase58(),
   );
 
@@ -36,7 +44,16 @@ export function HomeScreen() {
 
   if (isSuccess && !data) {
     // weird bug in tanstack query (old version) - query fetching for first time didnt worked
-    queryClient.invalidateQueries({ queryKey: ["get-all-challenges"] });
+    queryClient.invalidateQueries({
+      queryKey: ["get-all-challenges"],
+    });
+  }
+
+  if (privateSuccess && !privateData) {
+    // weird bug in tanstack query (old version) - query fetching for first time didnt worked
+    queryClient.invalidateQueries({
+      queryKey: ["get-challenge-private"],
+    });
   }
 
   const getChallengeStatus = (challenge: any) => {
@@ -68,98 +85,194 @@ export function HomeScreen() {
     <>
       {selectedAccount ? (
         <View style={styles.screenContainer}>
-          <Searchbar
-            placeholder="Search"
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
-            value={searchQuery}
-            onClearIconPress={() => setResult(data)}
-            style={{ marginBottom: 16 }}
-          />
           <ScrollView showsVerticalScrollIndicator={false}>
-            {result?.map((e, i) => {
-              return (
-                <Card key={i} style={[styles.card]} mode="elevated">
-                  <Card.Cover
-                    source={{
-                      uri: images[i % 3],
-                    }}
-                    style={styles.cardCover}
-                  />
-                  <Chip
-                    icon={getChallengeStatus(e).icon}
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: getChallengeStatus(e).color },
-                    ]}
-                    textStyle={{ color: "#314f37", fontWeight: "bold" }}
-                  >
-                    {getChallengeStatus(e).text}
-                  </Chip>
-                  <Card.Content style={styles.cardContent}>
-                    <Text variant="titleLarge" style={[styles.challengeName]}>
-                      {e.account.name}
-                    </Text>
-                    <View style={styles.challengeStats}>
-                      <Chip icon="calendar-range" style={[styles.chip]}>
-                        {e.account.duration} Days
-                      </Chip>
-                      <Chip icon="walk" style={[styles.chip]}>
-                        {e.account.steps.toLocaleString()} Steps/Day
-                      </Chip>
-                    </View>
-                    <View style={styles.challengeStats}>
-                      <Chip icon="account-group" style={[styles.chip]}>
-                        {e.account.totalParticipants} Participants
-                      </Chip>
-                      <Chip icon="currency-usd" style={[styles.chip]}>
-                        {e.account.pool.toString() / LAMPORTS_PER_SOL} SOL Pool
-                      </Chip>
-                    </View>
-                  </Card.Content>
-                  <Card.Actions style={styles.cardActions}>
-                    <Button
-                      mode="contained"
-                      icon="information-outline"
-                      style={[styles.joinButton]}
-                      onPress={() => {
-                        navigation.navigate("ChallengeDetails", {
-                          challenge: e.publicKey.toBase58(),
-                          name: e.account.name,
-                        });
+            <Searchbar
+              placeholder="Search"
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearch}
+              value={searchQuery}
+              onClearIconPress={() => setResult(data)}
+              style={{ marginBottom: 16 }}
+            />
+            {privateData?.length != 0 && (
+              <Text variant="headlineSmall" style={[styles.challengeName]}>
+                Invited Challenges
+              </Text>
+            )}
+            {privateData?.map((e, i) => {
+              let isJoined =
+                joinedData?.incomplete
+                  .map((x) => x.participant.account.challenge.toBase58())
+                  .includes(e.publicKey.toBase58()) ||
+                joinedData?.complete
+                  .map((x) => x.participant.account.challenge.toBase58())
+                  .includes(e.publicKey.toBase58());
+
+              if (!isJoined) {
+                return (
+                  <Card key={i} style={[styles.card]} mode="elevated">
+                    <Card.Cover
+                      source={{
+                        uri: images[i % 3],
                       }}
+                      style={styles.cardCover}
+                    />
+                    <Chip
+                      icon={getChallengeStatus(e).icon}
+                      style={[
+                        styles.statusBadge,
+                        { backgroundColor: getChallengeStatus(e).color },
+                      ]}
+                      textStyle={{ color: "#314f37", fontWeight: "bold" }}
                     >
-                      View Details
-                    </Button>
-                    <Button
-                      mode="contained"
-                      icon="run-fast"
-                      style={[styles.joinButton]}
-                      onPress={() => {
-                        console.log("clicked");
-                        joinChallenge.mutateAsync(e.publicKey);
-                      }}
-                      disabled={
-                        joinedData?.incomplete
-                          .map((x) =>
-                            x.participant.account.challenge.toBase58(),
-                          )
-                          .includes(e.publicKey.toBase58()) ||
-                        joinedData?.complete
-                          .map((x) =>
-                            x.participant.account.challenge.toBase58(),
-                          )
-                          .includes(e.publicKey.toBase58()) ||
-                        parseInt(e.account.startTime) >
+                      {getChallengeStatus(e).text}
+                    </Chip>
+                    <Card.Content style={styles.cardContent}>
+                      <Text variant="titleLarge" style={[styles.challengeName]}>
+                        {e.account.name}
+                      </Text>
+                      <View style={styles.challengeStats}>
+                        <Chip icon="calendar-range" style={[styles.chip]}>
+                          {e.account.duration} Days
+                        </Chip>
+                        <Chip icon="walk" style={[styles.chip]}>
+                          {e.account.steps.toLocaleString()} Steps/Day
+                        </Chip>
+                      </View>
+                      <View style={styles.challengeStats}>
+                        <Chip icon="account-group" style={[styles.chip]}>
+                          {e.account.totalParticipants} Participants
+                        </Chip>
+                        <Chip icon="currency-usd" style={[styles.chip]}>
+                          {e.account.pool.toString() / LAMPORTS_PER_SOL} SOL
+                          Pool
+                        </Chip>
+                      </View>
+                    </Card.Content>
+                    <Card.Actions style={styles.cardActions}>
+                      <Button
+                        mode="contained"
+                        icon="information-outline"
+                        style={[styles.joinButton]}
+                        onPress={() => {
+                          navigation.navigate("ChallengeDetails", {
+                            challenge: e.publicKey.toBase58(),
+                            name: e.account.name,
+                          });
+                        }}
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        mode="contained"
+                        icon="run-fast"
+                        style={[styles.joinButton]}
+                        onPress={() => {
+                          console.log("clicked");
+                          joinChallenge.mutateAsync(e.publicKey);
+                        }}
+                        disabled={
+                          parseInt(e.account.startTime) <
                           Math.floor(Date.now() / 1000)
-                      }
+                        }
+                      >
+                        Register for{" "}
+                        {e.account.amount.toString() / LAMPORTS_PER_SOL} SOL
+                      </Button>
+                    </Card.Actions>
+                  </Card>
+                );
+              }
+            })}
+            {result?.length != 0 && (
+              <Text variant="headlineSmall" style={[styles.challengeName]}>
+                Upcoming Challenges
+              </Text>
+            )}
+            {result?.map((e, i) => {
+              let isJoined =
+                joinedData?.incomplete
+                  .map((x) => x.participant.account.challenge.toBase58())
+                  .includes(e.publicKey.toBase58()) ||
+                joinedData?.complete
+                  .map((x) => x.participant.account.challenge.toBase58())
+                  .includes(e.publicKey.toBase58());
+
+              if (!isJoined) {
+                return (
+                  <Card key={i} style={[styles.card]} mode="elevated">
+                    <Card.Cover
+                      source={{
+                        uri: images[i % 3],
+                      }}
+                      style={styles.cardCover}
+                    />
+                    <Chip
+                      icon={getChallengeStatus(e).icon}
+                      style={[
+                        styles.statusBadge,
+                        { backgroundColor: getChallengeStatus(e).color },
+                      ]}
+                      textStyle={{ color: "#314f37", fontWeight: "bold" }}
                     >
-                      Register for{" "}
-                      {e.account.amount.toString() / LAMPORTS_PER_SOL} SOL
-                    </Button>
-                  </Card.Actions>
-                </Card>
-              );
+                      {getChallengeStatus(e).text}
+                    </Chip>
+                    <Card.Content style={styles.cardContent}>
+                      <Text variant="titleLarge" style={[styles.challengeName]}>
+                        {e.account.name}
+                      </Text>
+                      <View style={styles.challengeStats}>
+                        <Chip icon="calendar-range" style={[styles.chip]}>
+                          {e.account.duration} Days
+                        </Chip>
+                        <Chip icon="walk" style={[styles.chip]}>
+                          {e.account.steps.toLocaleString()} Steps/Day
+                        </Chip>
+                      </View>
+                      <View style={styles.challengeStats}>
+                        <Chip icon="account-group" style={[styles.chip]}>
+                          {e.account.totalParticipants} Participants
+                        </Chip>
+                        <Chip icon="currency-usd" style={[styles.chip]}>
+                          {e.account.pool.toString() / LAMPORTS_PER_SOL} SOL
+                          Pool
+                        </Chip>
+                      </View>
+                    </Card.Content>
+                    <Card.Actions style={styles.cardActions}>
+                      <Button
+                        mode="contained"
+                        icon="information-outline"
+                        style={[styles.joinButton]}
+                        onPress={() => {
+                          navigation.navigate("ChallengeDetails", {
+                            challenge: e.publicKey.toBase58(),
+                            name: e.account.name,
+                          });
+                        }}
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        mode="contained"
+                        icon="run-fast"
+                        style={[styles.joinButton]}
+                        onPress={() => {
+                          console.log("clicked");
+                          joinChallenge.mutateAsync(e.publicKey);
+                        }}
+                        disabled={
+                          parseInt(e.account.startTime) <
+                          Math.floor(Date.now() / 1000)
+                        }
+                      >
+                        Register for{" "}
+                        {e.account.amount.toString() / LAMPORTS_PER_SOL} SOL
+                      </Button>
+                    </Card.Actions>
+                  </Card>
+                );
+              }
             })}
           </ScrollView>
           <FAB
