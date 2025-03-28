@@ -43,7 +43,7 @@ export default function MyChallengesScreen() {
     if (isSuccess && !data) {
       queryClient.invalidateQueries({ queryKey: ["get-all-challenges"] });
     }
-  }, [isSuccess, data, queryClient]);
+  }, [isSuccess]);
 
   async function handleSyncData(startTime: number, challenge: string) {
     const currentTime = Math.floor(Date.now() / 1000);

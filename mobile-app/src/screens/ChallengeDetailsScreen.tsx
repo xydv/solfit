@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   useColorScheme,
+  Clipboard,
 } from "react-native";
 import {
   Text,
@@ -20,7 +21,7 @@ import {
   MD3LightTheme,
   Button,
 } from "react-native-paper";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigators/AppNavigator";
@@ -104,7 +105,9 @@ const ChallengeDetailsScreen: React.FC<ChallengeDetailsScreenProps> = ({
         <Card style={[styles.card, dynamicStyles.card]} mode="elevated">
           <Card.Content>
             <View style={styles.challengeHeader}>
-              <Text variant="headlineSmall">{data?.name}</Text>
+              <Text variant="headlineSmall" style={{ fontWeight: "bold" }}>
+                {data?.name}
+              </Text>
               <Chip icon="currency-usd">
                 {data?.pool.toString() / LAMPORTS_PER_SOL} SOL
               </Chip>
@@ -150,8 +153,13 @@ const ChallengeDetailsScreen: React.FC<ChallengeDetailsScreenProps> = ({
                 icon="run-fast"
                 onPress={() => {
                   if (!selectedAccount) return;
-                  joinChallenge.mutateAsync(selectedAccount.publicKey);
+                  joinChallenge.mutateAsync(
+                    new PublicKey(route.params.challenge),
+                  );
                 }}
+                disabled={
+                  parseInt(data?.startTime) < Math.floor(Date.now() / 1000)
+                }
               >
                 Register for {data?.amount / LAMPORTS_PER_SOL} SOL
               </Button>
@@ -399,12 +407,65 @@ const ChallengeDetailsScreen: React.FC<ChallengeDetailsScreenProps> = ({
           </Card>
         )}
 
-        {!user?.all ? (
-          ""
-        ) : (
+        {data?.isPrivate && (
           <Card style={[styles.card, dynamicStyles.card]} mode="elevated">
             <Card.Content>
-              <Text variant="titleMedium" style={styles.sectionTitle}>
+              <View style={styles.invitedUsersHeader}>
+                <Text variant="titleLarge" style={styles.sectionTitle}>
+                  Invited Users
+                </Text>
+                <Text variant="bodyLarge" style={styles.invitedUsersCount}>
+                  {data?.group.length} Member
+                  {data?.group.length !== 1 ? "s" : ""}
+                </Text>
+              </View>
+
+              {data?.group.map((participant, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.invitedUserItem,
+                    dynamicStyles.invitedUserItem,
+                  ]}
+                >
+                  <View style={styles.invitedUserContent}>
+                    <Avatar.Text
+                      size={40}
+                      label={participant.toBase58().substring(0, 2)}
+                      style={styles.invitedUserAvatar}
+                    />
+                    <View style={styles.invitedUserDetails}>
+                      <Text
+                        variant="bodyLarge"
+                        style={styles.invitedUserPubkey}
+                      >
+                        {formatPubkey(participant.toBase58())}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Clipboard.setString(participant.toBase58());
+                        // You might want to add a toast or snackbar to show "Copied!"
+                      }}
+                      style={styles.copyButton}
+                    >
+                      <MaterialCommunityIcons
+                        name="content-copy"
+                        size={20}
+                        color={colors.primary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </Card.Content>
+          </Card>
+        )}
+
+        {user?.all && (
+          <Card style={[styles.card, dynamicStyles.card]} mode="elevated">
+            <Card.Content>
+              <Text variant="titleLarge" style={styles.sectionTitle}>
                 Leaderboard
               </Text>
               {user?.all.map((participant, i) => (
@@ -566,6 +627,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginBottom: 16,
+    fontWeight: "bold",
   },
   leaderboardItem: {
     flexDirection: "row",
@@ -624,6 +686,37 @@ const styles = StyleSheet.create({
   endsInText: {
     color: "#4CAF50", // Green for "ends in"
   },
+  invitedUsersHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: 6,
+  },
+  invitedUsersCount: {
+    opacity: 0.7,
+  },
+  invitedUserItem: {
+    marginBottom: 8,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  invitedUserContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+  },
+  invitedUserAvatar: {
+    marginRight: 12,
+  },
+  invitedUserDetails: {
+    flex: 1,
+  },
+  invitedUserPubkey: {
+    fontWeight: "500",
+  },
+  copyButton: {
+    padding: 8,
+  },
 });
 
 // Dynamic styles that change with theme
@@ -647,6 +740,9 @@ const getDynamicStyles = (colorScheme: any) => {
       backgroundColor: isDark ? "#2d2d2d" : "#ffffff",
     },
     leaderboardItem: {
+      backgroundColor: isDark ? "#333333" : "#F5F5F5",
+    },
+    invitedUserItem: {
       backgroundColor: isDark ? "#333333" : "#F5F5F5",
     },
   });

@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, useColorScheme, View } from "react-native";
-import { Button, Card, Chip, FAB, Searchbar, Text } from "react-native-paper";
+import {
+  Badge,
+  Button,
+  Card,
+  Chip,
+  FAB,
+  Searchbar,
+  Text,
+  useTheme,
+} from "react-native-paper";
 import { useSolfitProgram } from "../components/solfit/solfit-data-access";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useQueryClient } from "@tanstack/react-query";
@@ -27,6 +36,7 @@ export function HomeScreen() {
   } = useSolfitProgram();
   const queryClient = useQueryClient();
   const navigation = useNavigation();
+  const theme = useTheme();
   const { isSuccess, data } = getAllChallenges;
   const { data: joinedData } = getUserJoinedChallenges(
     selectedAccount?.publicKey.toBase58(),
@@ -63,11 +73,26 @@ export function HomeScreen() {
       startTime + parseInt(challenge.account.duration.toString()) * 86400;
 
     if (currentTime < startTime) {
-      return { text: "Not Started", color: "#fbdeac", icon: "clock-outline" }; // Orange
+      return {
+        text: "Not Started",
+        color: theme.colors.onTertiary,
+        bgColor: theme.colors.tertiary,
+        icon: "clock-outline",
+      };
     } else if (currentTime < endTime) {
-      return { text: "Active", color: "#d9e7cb", icon: "play-circle-outline" }; // Green
+      return {
+        text: "Active",
+        color: theme.colors.onPrimary,
+        bgColor: theme.colors.primary,
+        icon: "play-circle-outline",
+      };
     } else {
-      return { text: "Ended", color: "#ffdbc9", icon: "stop-circle-outline" }; // Red
+      return {
+        text: "Ended",
+        color: theme.colors.onError,
+        bgColor: theme.colors.error,
+        icon: "stop-circle-outline",
+      };
     }
   };
 
@@ -94,11 +119,6 @@ export function HomeScreen() {
               onClearIconPress={() => setResult(data)}
               style={{ marginBottom: 16 }}
             />
-            {privateData?.length != 0 && (
-              <Text variant="headlineSmall" style={[styles.challengeName]}>
-                Invited Challenges
-              </Text>
-            )}
             {privateData?.map((e, i) => {
               let isJoined =
                 joinedData?.incomplete
@@ -110,85 +130,96 @@ export function HomeScreen() {
 
               if (!isJoined) {
                 return (
-                  <Card key={i} style={[styles.card]} mode="elevated">
-                    <Card.Cover
-                      source={{
-                        uri: images[i % 3],
-                      }}
-                      style={styles.cardCover}
-                    />
-                    <Chip
-                      icon={getChallengeStatus(e).icon}
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: getChallengeStatus(e).color },
-                      ]}
-                      textStyle={{ color: "#314f37", fontWeight: "bold" }}
-                    >
-                      {getChallengeStatus(e).text}
-                    </Chip>
-                    <Card.Content style={styles.cardContent}>
-                      <Text variant="titleLarge" style={[styles.challengeName]}>
-                        {e.account.name}
+                  <View key={i}>
+                    {i == 0 && (
+                      <Text
+                        variant="headlineSmall"
+                        style={[styles.challengeName]}
+                      >
+                        Invited Challenges
                       </Text>
-                      <View style={styles.challengeStats}>
-                        <Chip icon="calendar-range" style={[styles.chip]}>
-                          {e.account.duration} Days
-                        </Chip>
-                        <Chip icon="walk" style={[styles.chip]}>
-                          {e.account.steps.toLocaleString()} Steps/Day
-                        </Chip>
-                      </View>
-                      <View style={styles.challengeStats}>
-                        <Chip icon="account-group" style={[styles.chip]}>
-                          {e.account.totalParticipants} Participants
-                        </Chip>
-                        <Chip icon="currency-usd" style={[styles.chip]}>
-                          {e.account.pool.toString() / LAMPORTS_PER_SOL} SOL
-                          Pool
-                        </Chip>
-                      </View>
-                    </Card.Content>
-                    <Card.Actions style={styles.cardActions}>
-                      <Button
-                        mode="contained"
-                        icon="information-outline"
-                        style={[styles.joinButton]}
-                        onPress={() => {
-                          navigation.navigate("ChallengeDetails", {
-                            challenge: e.publicKey.toBase58(),
-                            name: e.account.name,
-                          });
+                    )}
+                    <Card style={[styles.card]} mode="elevated">
+                      <Card.Cover
+                        source={{
+                          uri: images[i % 3],
                         }}
+                        style={styles.cardCover}
+                      />
+                      <Badge
+                        style={[
+                          styles.statusBadge,
+                          {
+                            backgroundColor: getChallengeStatus(e).bgColor,
+                            color: getChallengeStatus(e).color,
+                            fontWeight: "bold",
+                          },
+                        ]}
+                        size={25}
                       >
-                        View Details
-                      </Button>
-                      <Button
-                        mode="contained"
-                        icon="run-fast"
-                        style={[styles.joinButton]}
-                        onPress={() => {
-                          console.log("clicked");
-                          joinChallenge.mutateAsync(e.publicKey);
-                        }}
-                        disabled={
-                          parseInt(e.account.startTime) <
-                          Math.floor(Date.now() / 1000)
-                        }
-                      >
-                        Register for{" "}
-                        {e.account.amount.toString() / LAMPORTS_PER_SOL} SOL
-                      </Button>
-                    </Card.Actions>
-                  </Card>
+                        {getChallengeStatus(e).text}
+                      </Badge>
+                      <Card.Content style={styles.cardContent}>
+                        <Text
+                          variant="titleLarge"
+                          style={[styles.challengeName]}
+                        >
+                          {e.account.name}
+                        </Text>
+                        <View style={styles.challengeStats}>
+                          <Chip icon="calendar-range" style={[styles.chip]}>
+                            {e.account.duration} Days
+                          </Chip>
+                          <Chip icon="walk" style={[styles.chip]}>
+                            {e.account.steps.toLocaleString()} Steps/Day
+                          </Chip>
+                        </View>
+                        <View style={styles.challengeStats}>
+                          <Chip icon="account-group" style={[styles.chip]}>
+                            {e.account.totalParticipants} Participants
+                          </Chip>
+                          <Chip icon="currency-usd" style={[styles.chip]}>
+                            {e.account.pool.toString() / LAMPORTS_PER_SOL} SOL
+                            Pool
+                          </Chip>
+                        </View>
+                      </Card.Content>
+                      <Card.Actions style={styles.cardActions}>
+                        <Button
+                          mode="contained"
+                          icon="information-outline"
+                          style={[styles.joinButton]}
+                          onPress={() => {
+                            navigation.navigate("ChallengeDetails", {
+                              challenge: e.publicKey.toBase58(),
+                              name: e.account.name,
+                            });
+                          }}
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          mode="contained"
+                          icon="run-fast"
+                          style={[styles.joinButton]}
+                          onPress={() => {
+                            console.log("clicked");
+                            joinChallenge.mutateAsync(e.publicKey);
+                          }}
+                          disabled={
+                            parseInt(e.account.startTime) <
+                            Math.floor(Date.now() / 1000)
+                          }
+                        >
+                          Register for{" "}
+                          {e.account.amount.toString() / LAMPORTS_PER_SOL} SOL
+                        </Button>
+                      </Card.Actions>
+                    </Card>
+                  </View>
                 );
               }
             })}
-            {result?.length != 0 && (
-              <Text variant="headlineSmall" style={[styles.challengeName]}>
-                Upcoming Challenges
-              </Text>
-            )}
             {result?.map((e, i) => {
               let isJoined =
                 joinedData?.incomplete
@@ -200,77 +231,93 @@ export function HomeScreen() {
 
               if (!isJoined) {
                 return (
-                  <Card key={i} style={[styles.card]} mode="elevated">
-                    <Card.Cover
-                      source={{
-                        uri: images[i % 3],
-                      }}
-                      style={styles.cardCover}
-                    />
-                    <Chip
-                      icon={getChallengeStatus(e).icon}
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: getChallengeStatus(e).color },
-                      ]}
-                      textStyle={{ color: "#314f37", fontWeight: "bold" }}
-                    >
-                      {getChallengeStatus(e).text}
-                    </Chip>
-                    <Card.Content style={styles.cardContent}>
-                      <Text variant="titleLarge" style={[styles.challengeName]}>
-                        {e.account.name}
+                  <View key={i}>
+                    {i == 0 && (
+                      <Text
+                        variant="headlineSmall"
+                        style={[styles.challengeName]}
+                      >
+                        Upcoming Challenges
                       </Text>
-                      <View style={styles.challengeStats}>
-                        <Chip icon="calendar-range" style={[styles.chip]}>
-                          {e.account.duration} Days
-                        </Chip>
-                        <Chip icon="walk" style={[styles.chip]}>
-                          {e.account.steps.toLocaleString()} Steps/Day
-                        </Chip>
-                      </View>
-                      <View style={styles.challengeStats}>
-                        <Chip icon="account-group" style={[styles.chip]}>
-                          {e.account.totalParticipants} Participants
-                        </Chip>
-                        <Chip icon="currency-usd" style={[styles.chip]}>
-                          {e.account.pool.toString() / LAMPORTS_PER_SOL} SOL
-                          Pool
-                        </Chip>
-                      </View>
-                    </Card.Content>
-                    <Card.Actions style={styles.cardActions}>
-                      <Button
-                        mode="contained"
-                        icon="information-outline"
-                        style={[styles.joinButton]}
-                        onPress={() => {
-                          navigation.navigate("ChallengeDetails", {
-                            challenge: e.publicKey.toBase58(),
-                            name: e.account.name,
-                          });
+                    )}
+                    <Card key={i} style={[styles.card]} mode="elevated">
+                      <Card.Cover
+                        source={{
+                          uri: images[i % 3],
                         }}
+                        style={styles.cardCover}
+                      />
+                      <Badge
+                        style={[
+                          styles.statusBadge,
+                          {
+                            backgroundColor: getChallengeStatus(e).bgColor,
+                            color: getChallengeStatus(e).color,
+                            fontWeight: "bold",
+                          },
+                        ]}
+                        size={25}
                       >
-                        View Details
-                      </Button>
-                      <Button
-                        mode="contained"
-                        icon="run-fast"
-                        style={[styles.joinButton]}
-                        onPress={() => {
-                          console.log("clicked");
-                          joinChallenge.mutateAsync(e.publicKey);
-                        }}
-                        disabled={
-                          parseInt(e.account.startTime) <
-                          Math.floor(Date.now() / 1000)
-                        }
-                      >
-                        Register for{" "}
-                        {e.account.amount.toString() / LAMPORTS_PER_SOL} SOL
-                      </Button>
-                    </Card.Actions>
-                  </Card>
+                        {getChallengeStatus(e).text}
+                      </Badge>
+                      <Card.Content style={styles.cardContent}>
+                        <Text
+                          variant="titleLarge"
+                          style={[styles.challengeName]}
+                        >
+                          {e.account.name}
+                        </Text>
+                        <View style={styles.challengeStats}>
+                          <Chip icon="calendar-range" style={[styles.chip]}>
+                            {e.account.duration} Days
+                          </Chip>
+                          <Chip icon="walk" style={[styles.chip]}>
+                            {e.account.steps.toLocaleString()} Steps/Day
+                          </Chip>
+                        </View>
+                        <View style={styles.challengeStats}>
+                          <Chip icon="account-group" style={[styles.chip]}>
+                            {e.account.totalParticipants} Participants
+                          </Chip>
+                          <Chip icon="currency-usd" style={[styles.chip]}>
+                            {e.account.pool.toString() / LAMPORTS_PER_SOL} SOL
+                            Pool
+                          </Chip>
+                        </View>
+                      </Card.Content>
+                      <Card.Actions style={styles.cardActions}>
+                        <Button
+                          mode="contained"
+                          icon="information-outline"
+                          style={[styles.joinButton]}
+                          onPress={() => {
+                            navigation.navigate("ChallengeDetails", {
+                              challenge: e.publicKey.toBase58(),
+                              name: e.account.name,
+                            });
+                          }}
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          mode="contained"
+                          icon="run-fast"
+                          style={[styles.joinButton]}
+                          onPress={() => {
+                            console.log("clicked");
+                            joinChallenge.mutateAsync(e.publicKey);
+                          }}
+                          disabled={
+                            parseInt(e.account.startTime) <
+                            Math.floor(Date.now() / 1000)
+                          }
+                        >
+                          Register for{" "}
+                          {e.account.amount.toString() / LAMPORTS_PER_SOL} SOL
+                        </Button>
+                      </Card.Actions>
+                    </Card>
+                  </View>
                 );
               }
             })}
@@ -321,7 +368,7 @@ const styles = StyleSheet.create({
     right: 10,
     zIndex: 10,
     padding: 0,
-    color: "black",
+    paddingHorizontal: 20,
   },
   statItem: {
     flex: 1,
