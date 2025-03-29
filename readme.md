@@ -55,24 +55,35 @@ Mobile app (Android) can be downloaded from the [releases section](https://githu
 <table>
   <tr>
     <td align="center">
-      <img src="/images/android/1.png" alt="Home Page" width=300 />
+      <img src="/images/android/1.png" alt="Invited Challenges" width=300 />
     </td>
     <td align="center">
-      <img src="/images/android/2.png" alt="Create Challenge" width=300 />
+      <img src="/images/android/2.png" alt="Upcoming Challenges" width=300 />
     </td>
     <td align="center">
-      <img src="/images/android/3.png" alt="Registered Challenges" width=300 />
+      <img src="/images/android/3.png" alt="Create Challenge" width=300 />
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="/images/android/4.png" alt="Completed Challenges" width=300 />
+      <img src="/images/android/4.png" alt="Ongoing Challenges (sync steps)" width=300 />
     </td>
     <td align="center">
-      <img src="/images/android/5.png" alt="Created Challenges" width=300 />
+      <img src="/images/android/5.png" alt="Completed Challenges" width=300 />
     </td>
     <td align="center">
-      <img src="/images/android/6.png" alt="Challenge Details" width=300 />
+      <img src="/images/android/6.png" alt="Created Challenges" width=300 />
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="/images/android/7.png" alt="Health Connect Permission" width=300 />
+    </td>
+    <td align="center">
+      <img src="/images/android/8.png" alt="Challenge Details Screen (for ongoing challenges)" width=300 />
+    </td>
+    <td align="center">
+      <img src="/images/android/9.png" alt="Challenge Details Screen (for invited challenges)" width=300 />
     </td>
   </tr>
 </table>
