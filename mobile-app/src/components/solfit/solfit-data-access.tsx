@@ -3,7 +3,7 @@ import { LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
 import { useMemo } from "react";
 import * as anchor from "@coral-xyz/anchor";
 
-import { Solfit } from "../../../../solfit/anchor-program/target/types/solfit";
+import { Solfit } from "../../../../anchor-program/target/types/solfit";
 import idl from "../../utils/idl.json";
 import { useConnection } from "../../utils/ConnectionProvider";
 import { useAnchorWallet } from "../../utils/useAnchorWallet";
@@ -138,12 +138,18 @@ export function useSolfitProgram() {
             ])
           ).sort(
             (a, b) =>
-              b.account.history.reduce((accumulator, currentValue) => {
-                return accumulator + currentValue;
-              }, 0) -
-              a.account.history.reduce((accumulator, currentValue) => {
-                return accumulator + currentValue;
-              }, 0),
+              b.account.history.reduce(
+                (accumulator: number, currentValue: number) => {
+                  return accumulator + currentValue;
+                },
+                0,
+              ) -
+              a.account.history.reduce(
+                (accumulator: number, currentValue: number) => {
+                  return accumulator + currentValue;
+                },
+                0,
+              ),
           );
 
           return {

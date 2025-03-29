@@ -17,7 +17,7 @@ app.use(cors());
 
 const rpcUrl = `https://devnet.helius-rpc.com/?api-key=3306ede2-b0da-4ea3-a571-50369811ddb4`;
 const connection = new Connection(rpcUrl);
-const PROGRAM_ID = new PublicKey('HGJ5aduNj8zgTthPEXf3hgmmEy19MmCpSu3PzwhPedCd');
+const PROGRAM_ID = new PublicKey('HcW7goAkhwaUX1JdmaCEBoprk4XnXxci4XCGrRFnxvXe');
 const program = new Program<Solfit>(
 	IDL as Solfit,
 	PROGRAM_ID,
