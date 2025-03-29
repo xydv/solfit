@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "solfit-android",
+    "name": "Solfit",
     "slug": "solfit-android",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,14 +14,14 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dedomil.solfitandroid"
+      "bundleIdentifier": "id.yadav.solfit"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.dedomil.solfitandroid",
+      "package": "id.yadav.solfit",
       "permissions": [
         "android.permission.health.READ_STEPS",
         "android.permission.health.WRITE_STEPS"
